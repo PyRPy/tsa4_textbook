@@ -1,0 +1,41 @@
+---
+title: "Chapter4_SpectralAnalysisandFiltering"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library('astsa')
+source('grid.r')
+```
+# data display
+```{r}
+head(soi)
+head(rec)
+str(soi)
+str(rec)
+```
+```{r}
+par(mfrow=c(2,1))
+plot(soi)
+plot(rec)
+```
+
+# spectral plots
+```{r}
+par(mfrow=c(2,1), mar=c(3.5,3,2.5,1),  mgp=c(1.5,.6,0), oma=rep(0,4), font.main=1)
+soi.per <- mvspec(soi, log="no", type='n')
+grid(lty=1); par(new=TRUE)
+mvspec(soi, log="no") 
+abline(v=1/4, lty=2, col=8)
+mtext('1/4',side=1, line=0, at=.25, cex=.75)
+
+rec.per <- mvspec(rec, log="no", type='n')
+grid(lty=1); par(new=TRUE)
+mvspec(rec, log="no") 
+abline(v=1/4, lty=2, col=8)
+mtext('1/4',side=1, line=0, at=.25, cex=.75)
+```
+
