@@ -417,8 +417,214 @@ dev.off()
 sarima(log(varve), 0, 1, 1, no.constant=TRUE) # ARIMA(0,1,1) 
 sarima(log(varve), 1, 1, 1, no.constant=TRUE) # ARIMA(1,1,1)
 
-## Example3.43 ModelChoicefortheU.S.GNPSeries
+## Example3.43 Model Choice for the U.S. GNP Series
 gnpgr <- diff(log(gnp))
 sarima(gnpgr, 1, 0, 0) # AR(1) 
 sarima(gnpgr, 0, 0, 2) # MA(2) 
 
+## The AIC and AICc both prefer the MA(2) ???t, whereas the BIC prefers the simplerAR(1)model.
+## ItisoftenthecasethattheBICwillselectamodelofsmaller orderthantheAICorAICc.Ineithercase,
+## itisnotunreasonabletoretaintheAR(1) becausepureautoregressivemodelsareeasiertoworkwith.
+
+## 3.8 Regression with Autocorrelated Errors
+## Example3.44 Mortality,Temperature and Pollution
+## Fig.3.19.Sample ACF and PACF of the mortality residuals in dicating an AR(2) process
+## An easy way to tackle this problem was ???rst presented in Cochrane and Orcutt(1949),
+trend = time(cmort)
+temp = tempr - mean(tempr)
+temp2 = temp^2 
+
+summary(fit <- lm(cmort~trend + temp + temp2 + part, na.action=NULL)) 
+acf2(resid(fit), 52) # implies AR2 
+
+sarima(cmort, 2,0,0, xreg=cbind(trend,temp,temp2,part)) 
+
+## Example3.44 Mortality,Temperature and Pollution | detailed codes
+## Fig.3.19.Sample ACF and PACF of the mortality residuals in dicating an AR(2) process
+par(mfrow=c(2,1), mar=c(2.5,2.5,0,0)+.5, mgp=c(1.5,.6,0))
+trend = time(cmort)
+temp = tempr - mean(tempr)
+temp2 = temp^2
+
+fit <- lm(cmort~trend + temp + temp2 + part, na.action=NULL)
+ACF = acf(resid(fit), 52, plot=FALSE)$acf[-1]
+PACF = pacf(resid(fit), 52, plot=FALSE)$acf
+num = length(cmort)
+minA = min(ACF)
+maxA = max(ACF)
+minP = min(PACF)
+maxP = max(PACF)
+U = 2/sqrt(num)
+L = -U
+LAG = 1:52/52
+minu = min(minA, minP, L) - 0.01
+maxu = min(maxA + 0.2, maxP + 0.2, 1)
+plot(LAG, ACF, type="h", ylim = c(minu, maxu), panel.first=grid(lty=1)); abline(h=0)
+abline(h = c(L, U), col=4, lty=2)  
+plot(LAG, PACF, type="h", ylim = c(minu, maxu) , panel.first=grid(lty=1)); abline(h=0)
+abline(h = c(L, U), col=4, lty=2)  
+dev.off()
+
+## page-147
+## Example3.45 Regression with Lagged Variables(cont) 
+## Rt = ??0 + ??1St???6 + ??2Dt???6 + ??3Dt???6 St???6 + wt, 
+dummy = ifelse(soi<0, 0, 1) 
+fish = ts.intersect(rec, soiL6=lag(soi,-6), dL6=lag(dummy,-6), dframe=TRUE)
+summary(fit <- lm(rec ~soiL6*dL6, data=fish, na.action=NULL)) 
+attach(fish) 
+plot(resid(fit)) 
+acf2(resid(fit)) # indicates AR(2) 
+intract = soiL6*dL6 # interaction term 
+sarima(rec,2,0,0, xreg = cbind(soiL6, dL6, intract)) 
+
+## 3.9 Multiplicative Seasonal ARIMA Models
+###########################################
+## Example3.46 A Seasonal AR Series 
+set.seed(666)
+phi = c(rep(0,11),.9)
+sAR = arima.sim(list(order=c(12,0,0), ar=phi), n=37)
+sAR = ts(sAR, freq=12)
+layout(matrix(c(1,1,2, 1,1,3), nc=2))
+par(mar=c(2.5,2.5,2,1), mgp=c(1.6,.6,0))
+plot(sAR, axes=FALSE, col='#808080', main='seasonal AR(1)', xlab="year", type='c')
+abline(v=1:4, lty=2, col=gray(.6))
+abline(h=seq(-4,2,2), col=gray(.9), lty=1)
+Months = c("J","F","M","A","M","J","J","A","S","O","N","D")
+points(sAR, pch=Months, cex=1.35, font=4, col=1:4) 
+axis(1,1:4) 
+axis(2)
+box()
+
+## lower part of the plot
+ACF = ARMAacf(ar=phi, ma=0, 100)[-1]  # [-1] removes 0 lag
+PACF = ARMAacf(ar=phi, ma=0, 100, pacf=TRUE)
+plot(ACF, type="h", xlab="LAG", ylim=c(-.1,1), axes=FALSE);
+segments(0,0,0,1)
+axis(1, seq(0,100,by=12))
+axis(2)
+box()
+abline(h=0)
+plot(PACF, type="h", xlab="LAG", ylim=c(-.1,1), axes=FALSE);
+axis(1, seq(0,100,by=12))
+axis(2)
+box()
+abline(h=0)
+dev.off()
+
+## Example3.47 A Mixed Seasonal Model
+## Fig.3.21. ACF and PACF of the mixed seasonal ARMA model xt = .8xt???12 + wt ???.5wt???1. 
+phi = c(rep(0,11),.8)
+ACF = ARMAacf(ar=phi, ma=-.5, 50)[-1]     # [-1] removes 0 lag
+PACF = ARMAacf(ar=phi, ma=-.5, 50, pacf=TRUE)
+par(mfrow=c(1,2), mar=c(2.5,2.5,2,1), mgp=c(1.6,.6,0))
+plot(ACF,  type="h", xlab="LAG", ylim=c(-.4,.8), axes=FALSE)  
+abline(h=0)
+axis(1, seq(0,50,by=12))
+axis(2)
+box()
+plot(PACF, type="h", xlab="LAG", ylim=c(-.4,.8), axes=FALSE)  
+abline(h=0)
+axis(1, seq(0,50,by=12))
+axis(2)
+box()
+dev.off()
+
+## Example3.49 Air Passengers
+## Fig. 3.22. R data set AirPassengers, which are the monthly totals of international airline passengersx,
+## andthetransformeddata:lx = logxt,dlx = ???logxt,andddlx = ???12???logxt.
+par(mfrow=c(4,1), mar = c(0, 3, 0, 3), oma=c(3,0,2,0), mgp=c(1.6,.6,0), cex.lab=1.5)
+x = AirPassengers
+lx = log(x)
+dlx = diff(lx)
+ddlx = diff(dlx, 12)
+
+u = ts.union(x,lx,dlx,ddlx) # create a new time series
+plot.ts(u[,1], ylab='x', xaxt="no", type='n')
+grid(lty=1, col=gray(.9))
+lines(u[,1])
+plot.ts(u[,2], ylab='lx', xaxt="no", type='n', yaxt='no', ylim=c(4.5,6.5))
+grid(lty=1, col=gray(.9))
+axis(4)
+lines(u[,2]) 
+
+plot.ts(u[,3], ylab='dlx', xaxt="no", type='n')
+grid(lty=1, col=gray(.9))
+lines(u[,3])
+
+plot.ts(u[,4], ylab='ddlx', yaxt='no', type='n')
+grid(lty=1, col=gray(.9))
+axis(4)
+lines(u[,4])
+title(xlab="Time", outer=TRUE)
+dev.off()
+
+
+
+sarima(log(AirPassengers), 0, 1, 1, 0, 1, 1, 12) 
+dev.off()
+
+
+####################
+x = AirPassengers
+xdata = log(x)
+fore = sarima.for(xdata, 12, 0,1,1, 0,1,1,12)
+dev.off()
+# -- for publication
+
+par(mar=c(2,2,0,0)+.5, mgp=c(1.4,.6,0))
+n = length(xdata)
+U = fore$pred + 2 * fore$se
+L = fore$pred - 2 * fore$se
+U1 = fore$pred + fore$se
+L1 = fore$pred - fore$se
+a = max(1, n - 100)
+minx = min(xdata[a:n], L)
+maxx = max(xdata[a:n], U)
+xnew = window(xdata, start=1953)
+ts.plot(xnew, fore$pred, col = 1:2, ylim = c(minx, maxx), type='n')
+grid(lty=1); par(new=TRUE)
+ts.plot(xnew, fore$pred, col = 1:2, type = "o", ylim = c(minx, maxx), ylab='log(AirPassengers)')
+xx = c(time(U), rev(time(U)))
+yy = c(L, rev(U))
+polygon(xx, yy, border = 8, col = gray(0.6, alpha = 0.2))
+yy1 = c(L1, rev(U1))
+polygon(xx, yy1, border = 8, col = gray(0.6, alpha = 0.2))
+lines(fore$pred, col = "red", type = "o")	
+dev.off()
+
+
+###########################
+## tsa4 book version codes in R
+x = AirPassengers 
+lx = log(x)
+dlx = diff(lx)
+ddlx = diff(dlx, 12)
+
+plot.ts(cbind(x,lx,dlx,ddlx), main="") 
+# below of interest for showing seasonal RW (not shown here): 
+par(mfrow=c(2,1)) 
+monthplot(dlx)
+monthplot(ddlx)
+
+## Seasonsal Component: It appears that at the seasons, the ACF is cutting o??? a lag 1s (s = 12),
+## whereas the PACF is tailing o??? at lags 1s,2s,3s,4s,. . .
+
+## Non-Seasonsal Component:Inspecting the sample ACF and PACF at the lowerlags, it appears as though 
+## both are tailing o???. 
+acf2(ddlx,50)
+
+## Thus,we ???rst try an ARIMA(1,1,1)×(0,1,1)12 on the logged data
+sarima (lx, 1,1,1, 0,1,1,12) 
+
+## However, the AR parameter is not signi???cant, so we should try dropping one parameter from the
+## within seasons part
+sarima(lx, 0,1,1, 0,1,1,12) 
+
+sarima(lx, 1,1,0, 0,1,1,12) 
+
+## All information criteria prefer the ARIMA(0,1,1)×(0,1,1)12 model,
+## which is the model displayed in(3.164).
+
+## Finally,weforecasttheloggeddataouttwelvemonths,andtheresultsareshown inFigure3.25. 
+sarima.for(lx, 12, 0,1,1, 0,1,1,12)
+sarima.for(lx, 24, 0,1,1, 0,1,1,12) # just try
