@@ -267,5 +267,158 @@ points(para[1:12], Sc[1:12], pch=16)
 dev.off()
 ###########
 
+#############
+## Example3.36 Bootstrapping an AR(1) 
+par(mar=c(3,3,1,1), mgp=c(1.6,.6,0))
+set.seed(101010)
+e = rexp(150, rate=.5)
+u = runif(150,-1,1)
+de = e*sign(u)
+dex = 50 + arima.sim(n=100,list(ar=.95), innov=de, n.start=50)
+plot.ts(dex, type='n', ylab=expression(X[~t]))
+grid(lty=1, col=gray(.9))
+lines(dex, type='o')
+dev.off()
+##
+##
+fit = ar.yw(dex, order=1) 
+round(cbind(fit$x.mean, fit$ar, fit$var.pred), 2) 
 
+# simulate 'true' distn
+set.seed(111)
+phi.yw = rep(NA, 1000)
+
+for (i in 1:1000){
+  e = rexp(150, rate=.5); u = runif(150,-1,1); de = e*sign(u)
+  x = 50 + arima.sim(n=100,list(ar=.95), innov=de, n.start=50)
+  phi.yw[i] = ar.yw(x, order=1)$ar }
+
+# fit to dex (generated above)
+fit = ar.yw(dex, order=1)
+
+# bootstrap
+set.seed(666)
+m = fit$x.mean
+phi = fit$ar  # estimate of phi
+nboot = 500   # number of bootstrap replicates
+resids = fit$resid[-1]  # the first resid is NA
+x.star = dex    # initialize x*
+phi.star.yw = rep(NA, nboot)
+for (i in 1:nboot) {
+  resid.star = sample(resids, replace=TRUE)
+  for (t in 1:99){ x.star[t+1] = m + phi*(x.star[t]-m) + resid.star[t] }
+  phi.star.yw[i] = ar.yw(x.star, order=1)$ar } 
+
+# plot everything
+culer = rgb(.5,.7,1,.5)
+par(mar=c(3,3,1,1), mgp=c(1.6,.6,0))
+hist(phi.star.yw, 15, main="", prob=TRUE, xlim=c(.65,1.05), ylim=c(0,14), col=culer, xlab=expression(hat(phi)))
+lines(density(phi.yw, bw=.02), lwd=2) 
+u = seq(.75, 1.1, by=.001)
+lines(u, dnorm(u, mean=.96, sd=.03), lty="dashed", lwd=2) 
+legend(.65,14, legend=c('true distribution', 'bootstrap distribution', 'normal approximation'),
+       bty='n', col=1, lty=c(1,0,2), lwd=c(2,0,2),
+       pch=c(NA,22,NA), pt.bg=c(NA,culer,NA), pt.cex=2.5)
+dev.off()
+#################################################
+
+#################################################
+## Example3.38 IMA(1,1) and EWMA
+## xt = xt???1 + wt ?????wt???1, 
+set.seed(666) 
+x = arima.sim(list(order = c(0,1,1), ma = -0.8), n = 100) 
+(x.ima = HoltWinters(x, beta=FALSE, gamma=FALSE)) 
+# ?? below is 1????? Smoothing parameter: alpha: 0.1663072 
+plot(x.ima)
+
+
+########################
+## Example3.39 Analysis of GNP Data
+layout(matrix(c(1, 1, 2), ncol = 1))
+par(mar=c(2.75,2.5,.5,.5), mgp=c(1.6,.6,0), cex.lab=1.1) 
+plot(gnp, ylab="Billions of Dollars",  type='n')
+grid(lty=1, col=gray(.9))
+
+lines(gnp)
+# acf  
+acf(gnp, 48, panel.first=grid(lty=1))
+dev.off()
+
+
+#############
+## Fig.3.14.U.S.GNP quarterly growth rate.The horizontal line displays the average growth of the process,
+## which is close to 1%.
+par(mar=c(2.75,2.5,.5,.5), mgp=c(1.6,.6,0)) 
+plot(diff(log(gnp)), ylab="GNP Growth Rate", type='n')
+grid(lty=1, col=gray(.9)); lines(diff(log(gnp)))
+abline(h=mean(diff(log(gnp))), col=4)
+dev.off()
+
+
+############ 
+## Fig.3.15.Sample ACF and PACF of the GNP quarterly growth rate.Lag is in terms of years
+ACF = acf(diff(log(gnp)), 24, plot=FALSE)$acf[-1]
+PACF = pacf(diff(log(gnp)), 24, plot=FALSE)$acf
+num = length(gnp)-1
+minA = min(ACF)
+maxA = max(ACF)
+minP = min(PACF)
+maxP = max(PACF)
+U = 2/sqrt(num)
+L = -U
+LAG = 1:24/4
+minu = min(minA, minP, L) - 0.01
+maxu = min(maxA + 0.2, maxP + 0.2, 1)
+
+par(mfrow=c(2,1), mar=c(2,2.5,0,0)+.5, mgp=c(1.4,.6,0))
+plot(LAG, ACF, type="h", xlab="LAG", ylim = c(minu, maxu), panel.first=grid(lty=1)); abline(h=0)
+abline(h = c(L, U), col=4, lty=2)  
+plot(LAG, PACF, type="h", xlab="LAG",  ylim = c(minu, maxu) , panel.first=grid(lty=1)); abline(h=0)
+abline(h = c(L, U), col=4, lty=2)  
+dev.off()
+
+#############
+## Fig.3.16.Diagnostics of the residuals from MA(2) ???t on GNP growth rate.
+sarima(diff(log(gnp)), 0, 0, 2) # MA(2)
+dev.off()
+
+
+
+#############
+## Example3.41 DiagnosticsfortheGlacialVarveSeries
+## Fig.3.17.Q-statisticp-valuesfortheARIMA(0,1,1)???t(top)andtheARIMA(1,1,1)???t(bottom) totheloggedvarvedata.
+par(mfrow=c(2,1), mar=c(2,2.5,.5,0)+.5, mgp=c(1.4,.6,0))
+rs = resid(arima(log(varve), order=c(0,1,1)))
+pval=c()
+nlag=20
+ppq=1
+for (i in (ppq+1):nlag) {
+  u <- stats::Box.test(rs, i, type = "Ljung-Box")$statistic
+  pval[i] <- stats::pchisq(u, i - ppq, lower.tail = FALSE)
+}
+plot((ppq + 1):nlag, pval[(ppq + 1):nlag], xlab = "lag", cex.main=1, font.main=1,
+     ylab = "p value", ylim = c(0, 1), main = "p values for Ljung-Box statistic")
+abline(h = 0.05, lty = 2, col = "blue")
+#
+rs = resid(arima(log(varve), order=c(1,1,1)))
+pval=c()
+nlag=20
+ppq=2
+for (i in (ppq+1):nlag) {
+  u <- stats::Box.test(rs, i, type = "Ljung-Box")$statistic
+  pval[i] <- stats::pchisq(u, i - ppq, lower.tail = FALSE)
+}
+plot((ppq + 1):nlag, pval[(ppq + 1):nlag], xlab = "lag", 
+     ylab = "p value", ylim = c(0, 1), main = "")
+abline(h = 0.05, lty = 2, col = "blue")
+dev.off()
+
+## page-143
+sarima(log(varve), 0, 1, 1, no.constant=TRUE) # ARIMA(0,1,1) 
+sarima(log(varve), 1, 1, 1, no.constant=TRUE) # ARIMA(1,1,1)
+
+## Example3.43 ModelChoicefortheU.S.GNPSeries
+gnpgr <- diff(log(gnp))
+sarima(gnpgr, 1, 0, 0) # AR(1) 
+sarima(gnpgr, 0, 0, 2) # MA(2) 
 
