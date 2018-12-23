@@ -199,5 +199,12 @@ SE = sqrt(diag(solve(emhess$Hessian)))
 
 
 ```
+```{r}
+# Display summary of estimation 
+estimate = c(para, em$mu0, em$Sigma0); SE = c(SE,NA,NA)
+u = cbind(estimate, SE)
+rownames(u) = c("phi","sigw","sigv","mu0","Sigma0")
+u 
+```
 
 
