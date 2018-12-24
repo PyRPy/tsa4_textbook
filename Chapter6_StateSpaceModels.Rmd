@@ -419,4 +419,202 @@ u      = ts.intersect(M=cmort, M1=lag(cmort,-1), M2=lag(cmort,-2), T1=lag(tempr,
            P=part, P4=lag(part -4), trend)
 sarima(u[,1], 0,0,0, xreg=u[,2:7])
 ```
+## 6.7 Bootstrapping State Space Models
+```{r}
+library(psych)                   # load psych package for scatter.hist  
+library(plyr)                    # load plyr to track iterations
+
+```
+```{r}
+################ 
+# NOTE: Change lines below to tol=.01 or tol=.001 and nboot=100 or nboot=200 
+#            if this takes a long time to run - depends on your machine
+            
+# tol = sqrt(.Machine$double.eps)  # determines convergence of optimizer     
+tol=0.001
+nboot = 100                      # number of bootstrap replicates     
+################# 
+
+y     = window(qinfl, c(1953,1), c(1965,2))  # inflation   
+z     = window(qintr, c(1953,1), c(1965,2))  # interest   
+num   = length(y) 
+A     = array(z, dim=c(1,1,num))
+input = matrix(1,num,1)  
+# Function to Calculate Likelihood   
+Linn  = function(para, y.data){  # pass data also
+   phi = para[1]; alpha = para[2]
+   b   = para[3]; Ups   = (1-phi)*b
+   cQ  = para[4]; cR    = para[5]  
+   kf  = Kfilter2(num,y.data,A,mu0,Sigma0,phi,Ups,alpha,1,cQ,cR,0,input)
+   return(kf$like)    
+}
+
+```
+```{r}
+# Parameter Estimation   
+mu0 = 1; Sigma0 = .01  
+init.par = c(phi=.84, alpha=-.77, b=.85, cQ=.12, cR=1.1) # initial values   
+est = optim(init.par,  Linn, NULL, y.data=y, method="BFGS", hessian=TRUE, 
+             control=list(trace=1, REPORT=1, reltol=tol))  
+SE  = sqrt(diag(solve(est$hessian)))                     
+phi = est$par[1]; alpha = est$par[2]
+b   = est$par[3]; Ups   = (1-phi)*b         
+cQ  = est$par[4]; cR    = est$par[5] 
+round(cbind(estimate=est$par, SE), 3) 
+```
+```{r}
+# BEGIN BOOTSTRAP   
+# Run the filter at the estimates 
+kf = Kfilter2(num,y,A,mu0,Sigma0,phi,Ups,alpha,1,cQ,cR,0,input)          
+# Pull out necessary values from the filter and initialize  
+xp      = kf$xp
+innov   = kf$innov 
+sig     = kf$sig 
+K       = kf$K 
+e       = innov/sqrt(sig)
+e.star  = e                      # initialize values
+y.star  = y  
+xp.star = xp  
+k       = 4:50                   # hold first 3 observations fixed 
+para.star = matrix(0, nboot, 5)  # to store estimates
+init.par  =  c(.84, -.77, .85, .12, 1.1)    
+pr <- progress_text()            # displays progress
+pr$init(nboot)
+for (i in 1:nboot){
+ pr$step()                      
+ e.star[k] = sample(e[k], replace=TRUE)   
+ for (j in k){ xp.star[j] = phi*xp.star[j-1] + Ups+K[j]*sqrt(sig[j])*e.star[j] }   
+ y.star[k] = z[k]*xp.star[k] + alpha + sqrt(sig[k])*e.star[k]  
+ est.star  = optim(init.par, Linn, NULL, y.data=y.star, method="BFGS", control=list(reltol=tol))     
+ para.star[i,] = cbind(est.star$par[1], est.star$par[2], est.star$par[3], 
+                        abs(est.star$par[4]), abs(est.star$par[5]))   
+}                       
+
+```
+```{r}
+# Some summary statistics  
+rmse = rep(NA,5)                 # SEs from the bootstrap
+for(i in 1:5){rmse[i]=sqrt(sum((para.star[,i]-est$par[i])^2)/nboot)
+              cat(i, rmse[i],"\n") 
+             }            
+```
+```{r}
+# Plot phi and sigw  
+phi  = para.star[,1] 
+sigw = abs(para.star[,4]) 
+phi  = ifelse(phi<0, NA, phi)    # any phi < 0 not plotted
+scatter.hist(sigw, phi, ylab=expression(phi), xlab=expression(sigma[~w]), smooth=FALSE, correl=FALSE,
+              density=FALSE, ellipse=FALSE, title='', pch=19, col=gray(.1,alpha=.33), 
+              panel.first=grid(lty=2), cex.lab=1.2)
+```
+## 6.8 Smoothing Splines and the Kalman Smoother
+### Example6.14 Smoothing Splines 
+```{r}
+set.seed(123)
+num   = 50
+w     = rnorm(num,0,.1)
+x     = cumsum(cumsum(w))
+y     = x + rnorm(num,0,1)
+tsplot(x, ylab="", lwd=2, ylim=c(-1,8))
+lines(y, type='o', col=8)
+## State Space ##
+Phi   = matrix(c(2,1,-1,0),2)
+A     = matrix(c(1,0),1)
+mu0   = matrix(0,2); Sigma0 = diag(1,2)
+Linn  = function(para){
+  sigw = para[1] 
+  sigv = para[2]
+  cQ   = diag(c(sigw,0))
+  kf   = Kfilter0(num, y, A, mu0, Sigma0, Phi, cQ, sigv)
+return(kf$like) 
+}
+## Estimation ##
+init.par = c(.1, 1)
+(est  = optim(init.par, Linn, NULL, method="BFGS", hessian=TRUE, control=list(trace=1,REPORT=1)))
+SE    = sqrt(diag(solve(est$hessian)))
+# Summary of estimation
+estimate = est$par; u = cbind(estimate, SE)
+rownames(u) = c("sigw","sigv"); u
+
+# Smooth
+sigw  = est$par[1]
+cQ    = diag(c(sigw,0))
+sigv  = est$par[2]
+ks    = Ksmooth0(num, y, A, mu0, Sigma0, Phi, cQ, sigv)
+xsmoo = ts(ks$xs[1,1,]); psmoo = ts(ks$Ps[1,1,])
+upp   = xsmoo+2*sqrt(psmoo)
+low   = xsmoo-2*sqrt(psmoo)
+lines(xsmoo, col=4, lty=2, lwd=3)
+lines(upp, col=4, lty=2); lines(low, col=4, lty=2)
+lines(smooth.spline(y), lty=1, col=2)
+legend("topleft", c("Observations","State"), pch=c(1,-1), lty=1, lwd=c(1,2), col=c(8,1))
+legend("bottomright", c("Smoother", "GCV Spline"), lty=c(2,1), lwd=c(3,1), col=c(4,2))
+
+```
+### Example6.16 Poisson HMM-Number of Major Earthquakes(cont) 
+```{r}
+library(depmixS4)
+model <- depmix(EQcount ~1, nstates=2, data=data.frame(EQcount), family=poisson())
+set.seed(90210)
+summary(fm <- fit(model))   # estimation results  
+
+```
+```{r}
+##-- Get Parameters --##
+u = as.vector(getpars(fm))  # ensure state 1 has smaller lambda
+ if (u[7] <= u[8]) {  para.mle = c(u[3:6], exp(u[7]), exp(u[8])) 
+  }  else  {  para.mle = c(u[6:3], exp(u[8]), exp(u[7])) }
+mtrans = matrix(para.mle[1:4], byrow=TRUE, nrow=2)
+lams   = para.mle[5:6]   
+pi1    = mtrans[2,1]/(2 - mtrans[1,1] - mtrans[2,2]);  pi2 = 1-pi1
+
+```
+```{r}
+##-- Graphics --##
+layout(matrix(c(1,2,1,3), 2))
+par(mar = c(3,3,1,1), mgp = c(1.6,.6,0))
+# data and states
+plot(EQcount, main="", ylab='EQcount', type='h', col=gray(.7))
+text(EQcount, col=6*posterior(fm)[,1]-2, labels=posterior(fm)[,1], cex=.9)
+# prob of state 2
+plot(ts(posterior(fm)[,3], start=1900), ylab = expression(hat(pi)[~2]*'(t|n)'));  abline(h=.5, lty=2)
+# histogram
+hist(EQcount, breaks=30, prob=TRUE, main="")
+xvals = seq(1,45)
+u1 = pi1*dpois(xvals, lams[1])  
+u2 = pi2*dpois(xvals, lams[2])
+lines(xvals, u1, col=4);   lines(xvals, u2, col=2)
+
+```
+```{r}
+##--  Bootstap --##
+# function to generate data
+pois.HMM.generate_sample = function(n,m,lambda,Mtrans,StatDist=NULL){
+ # n = data length, m = number of states, 
+ # Mtrans = transition matrix, StatDist = stationary distn 
+ if(is.null(StatDist)) StatDist = solve(t(diag(m)-Mtrans +1),rep(1,m))
+  mvect = 1:m
+  state = numeric(n)
+  state[1] = sample(mvect ,1, prob=StatDist)
+  for (i in 2:n)
+       state[i] = sample(mvect ,1,prob=Mtrans[state[i-1] ,])
+  y = rpois(n,lambda=lambda[state ])
+  list(y= y, state= state)   
+}
+# start it up
+set.seed(10101101)
+nboot     = 100
+nobs      = length(EQcount)
+para.star = matrix(NA, nrow=nboot, ncol = 6)
+for (j in 1:nboot){
+ x.star = pois.HMM.generate_sample(n=nobs, m=2, lambda=lams, Mtrans=mtrans)$y
+ model <- depmix(x.star ~1, nstates=2, data=data.frame(x.star), family=poisson())
+ u = as.vector(getpars(fit(model, verbose=0)))
+ # make sure state 1 is the one with the smaller intensity parameter 
+ if (u[7] <= u[8]) { para.star[j,] = c(u[3:6], exp(u[7]), exp(u[8])) }
+     else  { para.star[j,] = c(u[6:3], exp(u[8]), exp(u[7])) }         }
+# bootstrapped std errors 
+SE = sqrt(apply(para.star,2,var) + (apply(para.star,2,mean)-para.mle)^2)[c(1,4:6)]
+names(SE)=c('seM11/M12', 'seM21/M22', 'seLam1', 'seLam2'); SE
+```
 
