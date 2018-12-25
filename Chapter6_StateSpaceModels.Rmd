@@ -617,4 +617,59 @@ for (j in 1:nboot){
 SE = sqrt(apply(para.star,2,var) + (apply(para.star,2,mean)-para.mle)^2)[c(1,4:6)]
 names(SE)=c('seM11/M12', 'seM21/M22', 'seLam1', 'seLam2'); SE
 ```
+### Example6.17 Normal HMM-S&P 500 Weekly Returns
+```{r}
+library(depmixS4)
+y = ts(sp500w, start=2003, freq=52)  # make data depmix friendly
+mod3 <- depmix(y~1, nstates=3, data=data.frame(y))
+set.seed(2)
+summary(fm3 <- fit(mod3))
+
+##-- Graphics --##  
+layout(matrix(c(1,2, 1,3), 2), heights=c(1,.75))
+par(mar=c(2.5,2.5,.5,.5), mgp=c(1.6,.6,0))
+plot(y, main="", ylab='S&P500 Weekly Returns', col=gray(.7), ylim=c(-.11,.11))
+ culer = 4-posterior(fm3)[,1];  culer[culer==3]=4  # switch labels 1 and 3
+ text(y, col=culer, labels=4-posterior(fm3)[,1])
+
+ ##-- MLEs --## 
+ para.mle    = as.vector(getpars(fm3)[-(1:3)])
+ permu       = matrix(c(0,0,1,0,1,0,1,0,0), 3,3)   # for the label switch 
+ (mtrans.mle = permu%*%round(t(matrix(para.mle[1:9],3,3)),3)%*%permu)
+ (norms.mle  = round(matrix(para.mle[10:15],2,3),3)%*%permu)
+acf(y^2, xlim=c(.02,.5), ylim=c(-.09,.5), panel.first=grid(lty=2) ) 
+hist(y, 25, prob=TRUE, main='')
+ 
+culer=c(1,2,4); pi.hat = colSums(posterior(fm3)[-1,2:4])/length(y)
+ for (i in 1:3) { mu=norms.mle[1,i]; sig = norms.mle[2,i]
+ x = seq(-.15,.12, by=.001)
+lines(x, pi.hat[4-i]*dnorm(x, mean=mu, sd=sig), col=culer[i])   }
+
+##-- Bootstrap --##
+set.seed(666);  n.obs = length(y);  n.boot = 100       
+para.star = matrix(NA, nrow=n.boot, ncol = 15)
+respst <- para.mle[10:15];  trst <- para.mle[1:9]
+for ( nb in 1:n.boot ){
+  mod <- simulate(mod3)
+  y.star = as.vector(mod@response[[1]][[1]]@y)
+  dfy = data.frame(y.star)
+  mod.star <- depmix(y.star~1, data=dfy, respst=respst, trst=trst, nst=3)
+  fm.star = fit(mod.star, emcontrol=em.control(tol = 1e-5), verbose=FALSE)
+  para.star[nb,] = as.vector(getpars(fm.star)[-(1:3)]) }
+
+# bootstrap stnd errors 
+SE = sqrt(apply(para.star,2,var) + (apply(para.star,2,mean)-para.mle)^2)
+(SE.mtrans.mle = permu%*%round(t(matrix(SE[1:9],3,3)),3)%*%permu)
+(SE.norms.mle = round(matrix(SE[10:15], 2,3),3)%*%permu)
+```
+### Example6.18 Switching AR-In???uenza Mortality 
+```{r}
+library(MSwM)
+set.seed(90210)
+dflu  = diff(flu)
+model = lm(dflu~ 1)
+mod   = msmFit(model, k=2, p=2, sw=rep(TRUE,4)) # 2 regimes, AR(2)s
+summary(mod)
+plotProb(mod, which=3)
+```
 
