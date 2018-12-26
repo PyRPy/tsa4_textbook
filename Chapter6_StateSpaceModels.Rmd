@@ -672,4 +672,136 @@ mod   = msmFit(model, k=2, p=2, sw=rep(TRUE,4)) # 2 regimes, AR(2)s
 summary(mod)
 plotProb(mod, which=3)
 ```
+### Example6.22 Analysisof the In???uenza Data
+```{r}
+y = as.matrix(flu); num = length(y); nstate = 4;
+M1 = as.matrix(cbind(1,0,0,1))  # obs matrix normal
+M2 = as.matrix(cbind(1,0,1,1))  # obs matrix flu epi
+prob = matrix(0,num,1); yp = y  # to store pi2(t|t-1) & y(t|t-1)
+xfilter = array(0, dim=c(nstate,1,num)) # to store x(t|t)
+
+```
+```{r}
+# Function to Calculate Likelihood
+Linn = function(para){
+  alpha1 = para[1]; alpha2 = para[2]; beta0 = para[3]
+  sQ1 = para[4];  sQ2 = para[5];  like=0
+  xf  = matrix(0, nstate, 1)  # x filter
+  xp  = matrix(0, nstate, 1)  # x pred
+  Pf  = diag(.1, nstate)      # filter cov
+  Pp  = diag(.1, nstate)      # pred cov
+  pi11 <- .75 -> pi22;  pi12 <- .25 -> pi21; pif1 <- .5 -> pif2
+  phi = matrix(0,nstate,nstate)
+  phi[1,1] = alpha1; phi[1,2] = alpha2; phi[2,1]=1; phi[4,4]=1
+  Ups = as.matrix(rbind(0,0,beta0,0))
+  Q   = matrix(0,nstate,nstate)
+  Q[1,1] = sQ1^2; Q[3,3] = sQ2^2; R=0  # R=0 in final model
+  # begin filtering #
+    for(i in 1:num){
+    xp   = phi%*%xf + Ups; Pp = phi%*%Pf%*%t(phi) + Q
+    sig1 = as.numeric(M1%*%Pp%*%t(M1) + R)
+    sig2 = as.numeric(M2%*%Pp%*%t(M2) + R)
+    k1   = Pp%*%t(M1)/sig1; k2 = Pp%*%t(M2)/sig2
+    e1   = y[i]-M1%*%xp; e2 = y[i]-M2%*%xp
+    pip1 = pif1*pi11 + pif2*pi21; pip2 = pif1*pi12 + pif2*pi22
+    den1 = (1/sqrt(sig1))*exp(-.5*e1^2/sig1)
+    den2 = (1/sqrt(sig2))*exp(-.5*e2^2/sig2)
+    denm = pip1*den1 + pip2*den2
+    pif1 = pip1*den1/denm; pif2 = pip2*den2/denm
+    pif1 = as.numeric(pif1); pif2 = as.numeric(pif2)
+    e1   = as.numeric(e1); e2=as.numeric(e2)
+    xf   = xp + pif1*k1*e1 + pif2*k2*e2
+    eye  = diag(1, nstate)
+    Pf   = pif1*(eye-k1%*%M1)%*%Pp + pif2*(eye-k2%*%M2)%*%Pp
+    like = like - log(pip1*den1 + pip2*den2)
+    prob[i]<<-pip2; xfilter[,,i]<<-xf; innov.sig<<-c(sig1,sig2)
+    yp[i]<<-ifelse(pip1 > pip2, M1%*%xp, M2%*%xp)  
+    }
+return(like)   
+}
+
+```
+```{r}
+# Estimation
+alpha1 = 1.4; alpha2 = -.5; beta0 = .3; sQ1 = .1; sQ2 = .1
+init.par = c(alpha1, alpha2, beta0, sQ1, sQ2)
+(est = optim(init.par, Linn, NULL, method='BFGS', hessian=TRUE, control=list(trace=1,REPORT=1)))
+SE   = sqrt(diag(solve(est$hessian)))
+u    = cbind(estimate=est$par, SE)
+rownames(u)=c('alpha1','alpha2','beta0','sQ1','sQ2'); u
+
+```
+```{r}
+# Graphics
+predepi = ifelse(prob<.5,0,1); k = 6:length(y)       
+Time    = time(flu)[k]
+regime  = predepi[k]+1
+par(mfrow=c(3,1), mar=c(2,3,1,1)+.1)     
+plot(Time, y[k], type="n", ylab="")
+ grid(lty=2); lines(Time, y[k],  col=gray(.7))
+ text(Time, y[k], col=regime, labels=regime, cex=1.1)  
+ text(1979,.95,"(a)") 
+plot(Time, xfilter[1,,k], type="n", ylim=c(-.1,.4), ylab="")
+ grid(lty=2); lines(Time, xfilter[1,,k]) 
+ lines(Time, xfilter[3,,k]); lines(Time, xfilter[4,,k])
+ text(1979,.35,"(b)")
+plot(Time, y[k], type="n",   ylim=c(.1,.9),ylab="")
+ grid(lty=2); points(Time, y[k], pch=19)
+ prde1 = 2*sqrt(innov.sig[1]); prde2 = 2*sqrt(innov.sig[2])
+ prde = ifelse(predepi[k]<.5, prde1,prde2)
+   xx = c(Time, rev(Time))
+   yy = c(yp[k]-prde, rev(yp[k]+prde))
+ polygon(xx, yy, border=8, col=gray(.6, alpha=.3)) 
+ text(1979,.85,"(c)")
+```
+### Example6.23 Analysis of the New York Stock Exchange Returns
+```{r}
+y   = log(nyse^2) 
+num =length(y)
+
+# Initial Parameters
+phi0=0; phi1=.95; sQ=.2; alpha=mean(y); sR0=1; mu1=-3; sR1=2
+init.par = c(phi0,phi1,sQ,alpha,sR0,mu1,sR1)
+
+```
+```{r}
+# Innovations Likelihood 
+Linn = function(para){
+  phi0=para[1]; phi1=para[2]; sQ=para[3]; alpha=para[4]
+  sR0=para[5]; mu1=para[6]; sR1=para[7]
+  sv = SVfilter(num,y,phi0,phi1,sQ,alpha,sR0,mu1,sR1)
+  return(sv$like)    
+}
+
+
+```
+```{r}
+# Estimation  
+(est = optim(init.par, Linn, NULL, method="BFGS", hessian=TRUE, control=list(trace=1,REPORT=1)))
+SE = sqrt(diag(solve(est$hessian)))
+u = cbind(estimates=est$par, SE)  
+rownames(u)=c("phi0","phi1","sQ","alpha","sigv0","mu1","sigv1"); u
+
+```
+```{r}
+# Graphics   (need filters at the estimated parameters)
+phi0=est$par[1]; phi1=est$par[2]; sQ=est$par[3]; alpha=est$par[4]
+sR0=est$par[5]; mu1=est$par[6]; sR1=est$par[7]
+sv = SVfilter(num,y,phi0,phi1,sQ,alpha,sR0,mu1,sR1) 
+
+```
+```{r}
+# densities plot (f is chi-sq, fm is fitted mixture)
+x = seq(-15,6,by=.01) 
+f = exp(-.5*(exp(x)-x))/(sqrt(2*pi))
+f0 = exp(-.5*(x^2)/sR0^2)/(sR0*sqrt(2*pi))
+f1 = exp(-.5*(x-mu1)^2/sR1^2)/(sR1*sqrt(2*pi))
+fm = (f0+f1)/2
+plot(x, f, type="l"); lines(x, fm, lty=2,lwd=2)
+
+dev.new()
+Time = 701:1100
+plot (Time, nyse[Time], type='l', col=4, lwd=2, ylab='', xlab='', ylim=c(-.18,.12))
+lines(Time, sv$xp[Time]/10, lwd=2, col=6)
+```
 
