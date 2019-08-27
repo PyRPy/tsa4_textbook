@@ -6,7 +6,7 @@ source('grid.r')  # I changed the defaults so that
 #  grid() gives grid(lty=1, col = gray(.9))
 
 #####################################################
-## Fig.1.1.Johnson&Johnsonquarterlyearningspershare,84quarters,1960-Ito1980-IV.
+## Fig.1.1.Johnson&Johnson quarterly earnings per share,84quarters,1960-Ito1980-IV.
 ## page 2
 par(mar=c(3,3,1,1), mgp=c(1.6,.6,0))
 plot(jj, ylab="Quarterly Earnings per Share",   type='n')
@@ -47,13 +47,17 @@ dev.off()
 ## Fig.1.4.The daily returns of the DowJones Industrial Average(DJIA) from 
 ## April 20,2006 to April 20,2016.
 
-library(TTR)                                          
-djia = getYahooData("^DJI",start=20060420,end=20181206,freq="daily") 
-write.csv(djia, "djia_2018.csv")
+library(TTR)
+library(Quandl)
+library(quantmod)
+djia <-  getSymbols(Symbols = "DJIA", src = "yahoo", auto.assign = FALSE) 
+head(djia)
+
+write.csv(djia, "djia_2019.csv")
 library(xts)
-djiar = diff(log(djia$Close))[-1]         
+djiar <-  diff(log(djia$DJIA.Close))[-1]         
  
-par(mar=c(3,3,1,1), mgp=c(1.6,.6,0))
+# par(mar=c(3,3,1,1), mgp=c(1.6,.6,0))
 plot(djiar, ylab="DJIA Returns", main='', type='n')
 lines(djiar)
 dev.off()
@@ -61,7 +65,7 @@ dev.off()
 # Please use quantmod::getSymbols instead.
 
 #########
-## Fig.1.5.Monthly SOI and Recruitment(estimated new ???sh),1950-1987.
+## Fig.1.5.Monthly SOI and Recruitment(estimated new),1950-1987.
 par(mfrow = c(2,1), mar=c(2,2,1,0)+.5, mgp=c(1.6,.6,0), cex.main=1.05)
 plot(soi, ylab="", xlab="", main="Southern Oscillation Index",   type='n')
 grid(lty=1)
