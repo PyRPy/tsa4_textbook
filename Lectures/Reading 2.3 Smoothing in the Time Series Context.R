@@ -9,7 +9,7 @@ plot(soi)
 lines(soif, lwd=2, col=4)
 
 # removes (filters out) the obvious annual temperaturecycle and helps 
-# emphasize the El Niño cycle, although choppy
+# emphasize the El NiÃ±o cycle, although choppy
 
 
 # Example 2.12 Kernel Smoothing -------------------------------------------
