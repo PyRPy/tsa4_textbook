@@ -153,10 +153,13 @@ ccf(as.numeric(milk.electricity[,1]),as.numeric(milk.electricity[,2]),
 # main='milk & electricity',ylab='CCF')
 
 
+# 11.4 Prewhitening and Stochastic Regression -----------------------------
+
 # Exhibit 11.16
-me.dif=ts.intersect(diff(diff(milk,12)),diff(diff(log(electricity),12)))
-prewhiten(as.numeric(me.dif[,1]),as.numeric(me.dif[,2]),
-,ylab='CCF' )
+data("milk")
+data("electricity")
+me.dif <- ts.intersect(diff(diff(milk,12)),diff(diff(log(electricity),12)))
+prewhiten(as.numeric(me.dif[,1]),as.numeric(me.dif[,2]),ylab='CCF' )
 
 # Exhibit 11.17
 data(bluebird)
