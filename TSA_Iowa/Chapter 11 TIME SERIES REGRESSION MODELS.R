@@ -5,6 +5,7 @@
 # 11.1 Intervention Analysis ----------------------------------------------
 # Exhibit 11.1
 library(TSA)
+library(astsa)
 data(airmiles)
 head(airmiles)
 plot(log(airmiles),ylab='Log(airmiles)',xlab='Year')
@@ -164,20 +165,24 @@ prewhiten(as.numeric(me.dif[,1]),as.numeric(me.dif[,2]),ylab='CCF' )
 # Exhibit 11.17
 data(bluebird)
 plot(bluebird,yax.flip=T)
-
+head(bluebird)
+bluebird[1:5]
 # Exhibit 11.18
-prewhiten(y=diff(bluebird)[,1],x=diff(bluebird)[,2],main="Price & Sales",ylab='CCF')
-# As the time series are of unit period, there is no need to apply the as.numeric 
-# function.
+prewhiten(y=diff(bluebird)[,1],x=diff(bluebird)[,2],
+          main="Price & Sales",ylab='CCF')
+# As the time series are of unit period, there is no need to apply the 
+# as.numeric function.
 
 # Exhibit 11.19
-sales=bluebird[,1]
-price=bluebird[,2]
+sales <- bluebird[,1]
+price <- bluebird[,2]
 chip.m1=lm(sales~price,data=bluebird)
 summary(chip.m1)
+plot(resid(chip.m1), type = "l")
 
 # Exhibit 11.20
 acf(residuals(chip.m1),ci.type='ma')
+acf2(residuals(chip.m1))
 
 # Exhibit 11.21
 pacf(residuals(chip.m1))
@@ -186,19 +191,24 @@ pacf(residuals(chip.m1))
 eacf(residuals(chip.m1))
 
 # Exhibit 11.23
-chip.m2=arima(sales,order=c(1,0,4),xreg=data.frame(price))
+chip.m2 <- arima(sales,order=c(1,0,4),xreg=data.frame(price))
 chip.m2
+sarima(sales, 1,0,4, xreg = data.frame(price))
 # MA(1)& MA(3) estimates are not significant, at 5% level,
 # so they are constrained to be zero in the model fit below.
-chip.m3=arima(sales,order=c(1,0,4),xreg=data.frame(price),fixed=c(NA,0,NA,0,NA,NA,NA))
+
+chip.m3 <- arima(sales,order=c(1,0,4),xreg=data.frame(price),
+                 fixed=c(NA,0,NA,0,NA,NA,NA))
 # The MA(1) & MA(3) estimates are the second and fourth coefficients listed
 # in the model fit chip.m2. They are set to be zero using the fixed option.
 # NAs in the fixed option correspond to free parameters. 
 chip.m3
 # Now, the AR(1) coefficient estimate also seems not significant, so it is
 # removed in the next fitted model.
-chip.m4=arima(sales,order=c(0,0,4),xreg=data.frame(price),fixed=c(0,NA,0,NA,NA,NA))
+chip.m4 <- arima(sales,order=c(0,0,4),xreg=data.frame(price),
+              fixed=c(0,NA,0,NA,NA,NA))
 chip.m4
+sarima(sales, 0,0,4, xreg = data.frame(price))
 
 # model diagnostic can be done by running the tsdiag command.
 tsdiag(chip.m4)
@@ -209,26 +219,31 @@ data(boardings)
 plot(boardings,yax.flip=T)
 # The Denver dataset has three time series. Here, we only plot the first 
 # two series.
+class(boardings)
+library(fpp2)
+autoplot(boardings, facets = TRUE)
 
 # Exhibit 11.25
-m1=arima(boardings[,2],order=c(2,1,0))
+m1 <- arima(boardings[,2],order=c(2,1,0))
 prewhiten(x=boardings[,2],y=boardings[,1],x.model=m1)
 
 
 # Exhibit 11.26
 log.boardings=boardings[,1]
 log.price=boardings[,2]
-boardings.m1=arima(log.boardings,order=c(1,0,0),seasonal=list(order=c(1,0,0),period=12),
-xreg=data.frame(log.price))
+boardings.m1 <- arima(log.boardings,order=c(1,0,0),
+                      seasonal=list(order=c(1,0,0),period=12),
+                      xreg=data.frame(log.price))
 boardings.m1
 detectAO(boardings.m1) 
 detectIO(boardings.m1)
 # An AO is detected at time point 32, as well as an IO detected at time point 44
 # Since the test statistic of the AO has larger magnitude, an AO is added to the
 # model fitted below.
-boardings.m2=arima(log.boardings,order=c(1,0,3),seasonal=list(order=c(1,0,0),period=12),
-xreg=data.frame(log.price,outlier=c(rep(0,31),1,rep(0,36))),
-fixed=c(NA,0,0,rep(NA,5)))
+boardings.m2 <- arima(log.boardings,order=c(1,0,3),
+                      seasonal=list(order=c(1,0,0),period=12),
+                      xreg=data.frame(log.price,outlier=c(rep(0,31),1,rep(0,36))),
+                      fixed=c(NA,0,0,rep(NA,5)))
 boardings.m2
 detectAO(boardings.m2)
 detectIO(boardings.m2)
