@@ -84,7 +84,9 @@ SE <- sqrt(apply(para.star, 2, var) +
 names(SE) <- c('seM11/M12', 'seM21/M22', 'seLam1', 'seLam2')
 SE
 
-# Example 6.18 Switching AR - Influenza Mortality
+
+# Example 6.18 Switching AR - Influenza Mortality -------------------------
+
 library(MSwM)
 set.seed(90210)
 plot(flu, type="l")
