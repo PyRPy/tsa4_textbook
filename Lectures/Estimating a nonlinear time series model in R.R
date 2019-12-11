@@ -1,7 +1,9 @@
 # Estimating a nonlinear time series model in R
+# https://robjhyndman.com/hyndsight/nlts/
+# https://cran.r-project.org/web/packages/tsDyn/vignettes/tsDyn.pdf
 # The model is a first order threshold autoregression:
 
-# simulate time series ----------------------------------------------------
+# function to simulate time series -----------------------------------------
 
 simnlts <- function(n, alpha, beta, r, sigma, gamma, burnin=100){
   # generate noise
@@ -21,8 +23,7 @@ simnlts <- function(n, alpha, beta, r, sigma, gamma, burnin=100){
   return(y)
 }
 
-
-# fit the model -----------------------------------------------------------
+# function to fit the model -----------------------------------------------
 
 fitnlts <- function(x){
   ss <- function(par, x){
@@ -69,44 +70,21 @@ plot(tar1minus1) # to observe the trend and oscillations
 # const.H -0.116553    0.212183  -0.5493    0.5841    
 # phiH.1  -2.080732    0.145081 -14.3419 < 2.2e-16 ***
 
+# without threshold given
+tar1no.th <- setar(y, m=1, thDelay = 0)
+summary(tar1no.th) # find the threshold value at -1.056, very good !
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Coefficient(s):
+#   
+#          Estimate  Std. Error  t value  Pr(>|t|)    
+# const.L -0.223210    0.299579  -0.7451    0.4580    
+# phiL.1   0.444638    0.089626   4.9610 3.029e-06 ***
+# const.H -0.116553    0.212183  -0.5493    0.5841    
+# phiH.1  -2.080732    0.145081 -14.3419 < 2.2e-16 ***
+# ---
+# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# Threshold
+# Variable: Z(t) = + (1) X(t) 
+# 
+# Value: -1.056
