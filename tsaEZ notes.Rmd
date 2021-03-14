@@ -65,7 +65,7 @@ tsplot(diff(chicken), main = 'first difference')
 
 ```{r}
 par(mfrow = c(3, 1))
-acf1(chicken, 48, main = 'chiken')
+acf1(chicken, 48, main = 'chicken')
 acf1(resid(fit), 48, main = 'detrended')
 acf1(diff(chicken), 48, main = 'first difference')
 ```
@@ -154,4 +154,78 @@ plot(stl(x, s.window='per')) # not shown
 plot(stl(x, s.window=15))
 
 ```
+
+# ARIMA Models
+
+## Example 3.2 The Sample Path of an AR(1) Process
+```{r}
+par(mfrow=c(2,1))
+tsplot(arima.sim(list(order=c(1,0,0), ar=.9), n=100), ylab="x",
+main=(expression(AR(1)~~~phi==+.9)))
+tsplot(arima.sim(list(order=c(1,0,0), ar=-.9), n=100), ylab="x",
+main=(expression(AR(1)~~~phi==-.9)))
+
+```
+
+## Example 3.3 The MA(1) Process
+```{r}
+par(mfrow = c(2, 1))
+tsplot(arima.sim(list(order=c(0, 0, 1), ma=0.9), n = 100), 
+       ylab = "x",
+       main = (expression(MA(1) ~~~ theta == +0.5)))
+
+tsplot(arima.sim(list(order=c(0, 0, 1), ma=-0.9), n = 100), 
+       ylab = "x",
+       main = (expression(MA(1) ~~~ theta == -0.5)))
+
+```
+
+## 3.5 Forecasting
+
+```{r}
+sarima(rec, 2, 0, 0)
+```
+```{r}
+sarima.for(rec, 24, 2, 0, 0)
+```
+
+## 3.6 Integrated Models
+
+## Example 3.26 IMA(1, 1) and EWMA
+```{r}
+set.seed(666)
+x = arima.sim(list(order = c(0, 1, 1), ma = -0.8), n = 100)
+x.ima = HoltWinters(x, beta = FALSE, gamma = FALSE)
+plot(x.ima, main = "EWMA")
+```
+
+## 3.7 Building ARIMA Models
+## Example 3.27 Analysis of GNP Data
+```{r}
+tsplot(gnp)
+```
+```{r}
+acf2(gnp, 50)
+```
+```{r}
+gnpgr = diff(log(gnp))
+tsplot(gnpgr)
+```
+```{r}
+acf2(gnpgr, 24)
+```
+
+```{r}
+# AR(1) model
+sarima(gnpgr, 1, 0, 0)
+```
+```{r}
+# MA(2) model
+sarima(gnpgr, 0, 0, 2)
+```
+
+## Example 3.28 Diagnostics for GNP Growth Rate Example
+## Example 3.31 Model Choice for the U.S. GNP Series
+
+* Use AIC or BIC
 
