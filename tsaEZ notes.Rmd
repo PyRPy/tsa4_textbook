@@ -8,7 +8,7 @@ output: word_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-* tsaEZ® http://www.stat.pitt.edu/stoffer/tsa4/
+* tsaEZ? http://www.stat.pitt.edu/stoffer/tsa4/
 
 ```{r}
 # load package
@@ -228,4 +228,47 @@ sarima(gnpgr, 0, 0, 2)
 ## Example 3.31 Model Choice for the U.S. GNP Series
 
 * Use AIC or BIC
+
+## 3.8 Regression with Autocorrelated Errors
+### Example 3.32 Mortality, Temperature and Pollution
+
+```{r}
+trend = time(cmort)
+temp = tempr - mean(tempr)
+temp2 = temp^2
+fit <- lm(cmort ~ trend + temp + temp2 + part, na.action = NULL)
+```
+```{r message=FALSE, warning=FALSE}
+# check the AR
+acf2(resid(fit), 52)
+```
+```{r}
+sarima(cmort, 2, 0, 0, xreg = cbind(trend, temp, temp2, part))
+```
+
+### Example 3.33 Regression with Lagged Variables (cont)
+```{r}
+dummy = ifelse(soi < 0, 0, 1)
+fish = ts.intersect(rec, soiL6=lag(soi, -6), dL6 = lag(dummy, -6),
+                    dframe = TRUE)
+
+summary(fit <- lm(rec ~ soiL6*dL6, data = fish, na.action = NULL))
+```
+
+```{r}
+attach(fish)
+tsplot(resid(fit))
+```
+
+```{r}
+acf2(resid(fit)) # suggest AR2
+```
+```{r}
+intract = soiL6 * dL6
+sarima(rec, 2, 0, 0, xreg = cbind(soiL6, dL6, intract))
+
+```
+```{r}
+detach(fish)
+```
 
