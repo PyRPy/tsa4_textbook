@@ -272,3 +272,57 @@ sarima(rec, 2, 0, 0, xreg = cbind(soiL6, dL6, intract))
 detach(fish)
 ```
 
+## 3.9 Seasonal ARIMA Models
+### Example 3.34 A Seasonal AR Series
+```{r}
+# three years data with phi = 0.9
+set.seed(666)
+phi = c(rep(0, 11), 0.9)
+sAR = arima.sim(list(order=c(12, 0, 0), ar = phi), n = 37)
+sAR = ts(sAR, frequency = 12)
+```
+```{r}
+layout(matrix(c(1,2, 1,3), nc=2))
+par(mar=c(3,3,2,1), mgp=c(1.6, 0.6, 0))
+plot(sAR, axes = FALSE, main = 'seasonal AR(1)', xlab = "year", type = 'c')
+Months = c("J","F","M","A","M","J","J","A","S","O","N","D")
+points(sAR, pch=Months, cex=1.25, font=4, col=1:4)
+axis(1, 1:4)
+abline(v=1:4, lty=2, col=gray(.6))
+axis(2)
+box()
+ACF = ARMAacf(ar=phi, ma=0, 100)
+PACF = ARMAacf(ar=phi, ma=0, 100, pacf=TRUE)
+plot(ACF, type="h", xlab="lag", ylim=c(-.1,1))
+abline(h=0)
+plot(PACF, type="h", xlab="lag", ylim=c(-.1,1))
+abline(h=0)
+
+```
+### Example 3.35 A Mixed Seasonal Model
+
+* ARMA(0, 1) × (1, 0)12 model
+```{r}
+phi = c(rep(0, 11), 0.8)
+ACF = ARMAacf(ar = phi, ma=-0.5, 50)[-1]
+PACF = ARMAacf(ar=phi, ma=-0.5, 50, pacf = TRUE)
+
+par(mfrow = c(1, 2))
+plot(ACF, type = "h", xlab = "lag", ylim = c(-0.4, 0.8))
+abline(h = 0)
+
+plot(PACF, type = "h", xlab = "lag", ylim = c(-0.4, 0.8))
+abline(h = 0)
+
+```
+```{r}
+# example for birth rate in US
+par(mfrow = c(3, 1), mar=c(2,2,0,0) + 1, mgp = c(1.6, 0.6, 0))
+tsplot(birth)
+tsplot(diff(log(birth)))
+acf1(diff(log(birth)), 61)
+```
+```{r}
+# try decompose
+plot(decompose(birth))
+```
