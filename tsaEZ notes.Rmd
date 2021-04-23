@@ -358,3 +358,43 @@ sarima(lx, 1, 1, 0, 0, 1, 1, 12)
 ```{r}
 sarima.for(lx, 12, 0, 1, 1, 0, 1, 1, 12)
 ```
+
+# Chapter 5 Some Additional Topics
+
+## 5.1 GARCH Models
+
+```{r}
+# modeling on returns
+tsplot(diff(log(gnp)), type = 'o')
+points(diff(gnp)/lag(gnp, -1), pch = '+')
+```
+
+### Example 5.1 Analysis of U.S. GNP
+```{r}
+res = resid(sarima(diff(log(gnp)), 1, 0, 0, details = FALSE)$fit)
+acf2(res^2, 20)
+```
+
+```{r}
+library(fGarch)
+gnpr = diff(log(gnp))
+summary(garchFit(~ arma(1, 0) + garch(1, 0), data = gnpr))
+```
+
+### Example 5.2 GARCH Analysis of the DJIA Returns
+```{r}
+library(xts)
+djiar = diff(log(djia$Close))[-1]
+acf2(djiar)
+```
+```{r}
+u = resid(sarima(djiar, 1, 0, 0, details = FALSE)$fit)
+acf2(u^2)
+```
+```{r}
+library(fGarch)
+summary(djia.g <- garchFit(~arma(1, 0) + garch(1,1), data = djiar, cond.dist = 'std'))
+```
+```{r}
+plot(djia.g, which = 3)
+```
