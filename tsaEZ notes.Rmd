@@ -326,3 +326,35 @@ acf1(diff(log(birth)), 61)
 # try decompose
 plot(decompose(birth))
 ```
+
+### Example 3.37 Air Passengers
+```{r}
+x = AirPassengers
+lx = log(x) # stablize the variance
+dlx = diff(lx) # remove trend
+ddlx = diff(dlx, 12) # remove seasonal trend
+plot.ts(cbind(x, lx, dlx, ddlx), yax.flip = TRUE, main = "")
+```
+
+```{r}
+acf2(ddlx, 50)
+```
+
+* first try an ARIMA(1, 1, 1) × (0, 1, 1)12 on the logged data:
+```{r}
+sarima(lx, 1,1,1, 0,1,1,12)
+# AR parameter is not significant,
+```
+
+```{r}
+sarima(lx, 0, 1, 1, 0, 1, 1, 12)
+```
+
+```{r}
+sarima(lx, 1, 1, 0, 0, 1, 1, 12)
+```
+
+* forecast with logged data in 12 months
+```{r}
+sarima.for(lx, 12, 0, 1, 1, 0, 1, 1, 12)
+```
