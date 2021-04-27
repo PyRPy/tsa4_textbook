@@ -398,3 +398,38 @@ summary(djia.g <- garchFit(~arma(1, 0) + garch(1,1), data = djiar, cond.dist = '
 ```{r}
 plot(djia.g, which = 3)
 ```
+
+### Example 5.3 APARCH Analysis of the DJIA Returns
+```{r message=FALSE, warning=FALSE}
+library(fGarch)
+library(xts)
+```
+```{r message=FALSE, warning=FALSE}
+lapply(c('xts', 'fGarch'), library, char = TRUE)
+```
+```{r}
+djiar = diff(log(djia$Close))[-1]
+
+summary(djia.ap <- garchFit(~arma(1, 0) + aparch(1, 1), 
+                        data = djiar, cond.dist = 'std'))
+```
+```{r}
+plot(djia.ap)
+```
+
+## 5.2 Unit Root Testing
+
+### Example 5.4 Testing Unit Roots in the Glacial Varve Series
+
+```{r}
+library(tseries)
+```
+```{r}
+adf.test(log(varve), k=0)
+```
+```{r}
+adf.test(log(varve))
+```
+```{r}
+pp.test(log(varve))
+```
