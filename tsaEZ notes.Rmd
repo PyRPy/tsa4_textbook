@@ -433,3 +433,26 @@ adf.test(log(varve))
 ```{r}
 pp.test(log(varve))
 ```
+## 5.3 Long Memory and Fractional Differencing
+
+### Example 5.5 Long Memory Fitting of the Glacial Varve Series
+
+* Compare residuals
+```{r}
+library(arfima)
+```
+```{r}
+summary(varve.fd <- arfima(log(varve), order = c(0, 0, 0)))
+```
+```{r}
+innov = resid(varve.fd)
+tsplot(innov[[1]])
+```
+
+```{r}
+acf1(innov[[1]])
+```
+
+```{r}
+sarima(log(varve), 1, 1, 1)
+```
