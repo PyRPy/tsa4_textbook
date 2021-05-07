@@ -359,6 +359,34 @@ sarima(lx, 1, 1, 0, 0, 1, 1, 12)
 sarima.for(lx, 12, 0, 1, 1, 0, 1, 1, 12)
 ```
 
+
+# Chapter 4 Spectral Analysis and Filtering
+
+## 4.2 Periodicity and Cyclical Behavior
+### Example 4.1 A Periodic Series
+```{r}
+library(astsa)
+x1 = 2 * cos(2*pi*1:100*6/100) + 3*sin(2*pi*1:100*6/100)
+x2 = 4*cos(2*pi*1:100*10/100) + 5*sin(2*pi*1:100*10/100)
+x3 = 6*cos(2*pi*1:100*40/100) + 7*sin(2*pi*1:100*40/100)
+x = x1 + x2 + x3
+```
+```{r}
+par(mfrow = c(2, 2))
+tsplot(x1, ylim=c(-10, 10), main=expression(omega==6/100~~~A^2==13))
+tsplot(x2, ylim=c(-10,10), main=expression(omega==10/100~~~A^2==41))
+tsplot(x3, ylim=c(-10,10), main=expression(omega==40/100~~~A^2==85))
+tsplot(x, ylim=c(-16,16), main="sum")
+```
+
+### Example 4.2 Estimation and the Periodogram
+```{r}
+n = length(x)
+P = (4/n) * Mod(fft(x) / sqrt(n))^2
+Fr = 0:99 / 100
+tsplot(Fr, P, type = 'o', xlab = "frequency", ylab = "scaled periodogram")
+```
+
 # Chapter 5 Some Additional Topics
 
 ## 5.1 GARCH Models
