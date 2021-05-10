@@ -408,6 +408,32 @@ text(0.027, 9000, "29 day cycle")
 y = cbind(1:50, Freq[1:50], Per[1:50])
 tail(y[order(y[, 3]), ], 10)
 ```
+## 4.3 The Spectral Density
+### Example 4.4 White Noise Series, Moving Average, AR(2)
+```{r}
+par(mfrow=c(3,1))
+arma.spec(log="no", main="White Noise")
+arma.spec(ma=0.5, log="no", main = "moving average")
+arma.spec(ar=c(1.0, -0.9), log = "no", main = "autoregression")
+```
+
+## 4.4 Periodogram and Discrete Fourier Transform
+
+```{r}
+(dft = fft(1:4)/sqrt(4))
+```
+```{r}
+(idft = fft(dft, inverse=TRUE)/sqrt(4))
+```
+```{r}
+(Re(idft)) 
+```
+### Example 4.7 Periodogram of SOI and Recruitment Series
+```{r}
+par(mfrow=c(2,1)) # raw periodogram
+mvspec(soi, log="no"); abline(v=1/4, lty="dotted")
+mvspec(rec, log="no"); abline(v=1/4, lty="dotted")
+```
 
 # Chapter 5 Some Additional Topics
 
