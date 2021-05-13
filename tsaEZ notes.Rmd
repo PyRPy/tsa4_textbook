@@ -435,6 +435,65 @@ mvspec(soi, log="no"); abline(v=1/4, lty="dotted")
 mvspec(rec, log="no"); abline(v=1/4, lty="dotted")
 ```
 
+## 4.5 Nonparametric Spectral Estimation
+```{r}
+library(astsa)
+arma.spec(ar=c(1,-.9), xlim=c(.15,.151), n.freq=100000)
+```
+
+### Example 4.8 Averaged Periodogram for SOI and Recruitment
+```{r}
+par(mfrow=c(2,1))
+(k = kernel("daniell", 4))
+soi.ave = mvspec(soi, k, log="no"); abline(v=c(.25,1,2,3), lty=2)
+rec.ave = mvspec(rec, k, log="no"); abline(v=c(.25,1,2,3), lty=2)
+
+```
+
+```{r}
+soi.ave$bandwidth # = 0.225
+soi.ave$df # = 16.9875
+```
+### Example 4.9 Harmonics
+```{r}
+t = seq(0, 1, by = 1/200)
+amps = c(1, .5, .4, .3, .2, .1)
+x = matrix(0, 201, 6)
+for (j in 1:6) {
+        x[,j] = amps[j]*sin(2*pi*t*2*j)
+        }
+x = ts(cbind(x, rowSums(x)), start=0, deltat=1/200)
+```
+```{r}
+# no color ?
+ts.plot(x, lty=c(1:6, 1), lwd=c(rep(1,6), 2), ylab="Sinusoids")
+names = c("Fundamental","2nd Harmonic","3rd Harmonic","4th Harmonic", "5th
+Harmonic", "6th Harmonic", "Formed Signal")
+legend("topright", names, lty=c(1:6, 1), lwd=c(rep(1,6), 2) )
+```
+
+### Example 4.10 Smoothed Periodogram for SOI and Recruitment
+```{r}
+kernel("modified.daniell", c(3,3)) # for a list
+plot(kernel("modified.daniell", c(3,3))) # for a plot
+```
+```{r}
+k = kernel("modified.daniell", c(3,3))
+soi.smo = mvspec(soi, k, taper=.1, log="no") # a taper is used
+abline(v=c(1/4,1), lty="dotted")
+
+```
+
+### Example 4.11 The Effect of Tapering the SOI Series
+```{r}
+s0 = mvspec(soi, spans=c(7,7), plot=FALSE) # no taper
+s50 = mvspec(soi, spans=c(7,7), taper=.5, plot=FALSE) # full taper
+plot(s0$freq, s0$spec, log="y", type="l", lty=2, ylab="spectrum",
+xlab="frequency") # dashed line
+lines(s50$freq, s50$spec) # solid line
+```
+
+
 # Chapter 5 Some Additional Topics
 
 ## 5.1 GARCH Models
